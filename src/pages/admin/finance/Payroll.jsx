@@ -248,7 +248,7 @@ export default function Payroll() {
                     <div>
                        <div className="flex items-center gap-3 mb-2">
                           <div className="h-10 w-10 rounded-xl bg-[#0F766E] flex items-center justify-center text-white font-black text-xl">M</div>
-                          <h1 className="text-2xl font-black text-slate-900 tracking-tight">MICROLAN IT SERVICES</h1>
+                          <h1 className="text-2xl font-black text-slate-900 tracking-tight">TechnoWeb SERVICES</h1>
                        </div>
                        <p className="text-xs text-slate-400 font-medium max-w-[200px]">Pvt. Ltd. | 123 Corporate Tower, Tech District, Global Park</p>
                     </div>

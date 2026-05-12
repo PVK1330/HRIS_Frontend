@@ -33,5 +33,11 @@ export async function uploadTenantLogo(file) {
 export function getTenantLogoAbsoluteUrl(relativePath) {
   if (!relativePath || typeof relativePath !== 'string') return ''
   if (relativePath.startsWith('http')) return relativePath
-  return relativePath.startsWith('/') ? relativePath : `/${relativePath}`
+  const cleanPath = relativePath.startsWith('/') ? relativePath : `/${relativePath}`
+  const baseUrl =
+    API_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : '')
+
+  if (!baseUrl) return cleanPath
+  return `${baseUrl.replace(/\/$/, '')}${cleanPath}`
 }

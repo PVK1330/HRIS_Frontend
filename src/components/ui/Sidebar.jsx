@@ -35,15 +35,22 @@ export function Sidebar({
   const avatarPalette = role === 'superadmin' ? 'bg-purple-100 text-[#6D28D9]' : undefined
   const { hasModule } = useAuth()
 
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
   const resolvedLabel = logoFallbackLabel ?? 'HRIS'
   const trimmedLogo = logoUrl && String(logoUrl).trim()
+  const resolvedLogoSrc = trimmedLogo
+    ? trimmedLogo.startsWith('http')
+      ? trimmedLogo
+      : `${baseUrl}${trimmedLogo.startsWith('/') ? trimmedLogo : `/${trimmedLogo}`}`
+    : ''
+  const fallbackLogoSrc = `${baseUrl}/public/HRIS_Logo.png`
 
   const [imgBroken, setImgBroken] = useState(false)
   useEffect(() => {
     setImgBroken(false)
-  }, [trimmedLogo])
+  }, [resolvedLogoSrc])
 
-  const showLogo = Boolean(trimmedLogo) && !imgBroken
+  const showLogo = Boolean(resolvedLogoSrc) && !imgBroken
 
   return (
     <>
@@ -64,14 +71,20 @@ export function Sidebar({
             <div className="h-10 w-32 animate-pulse rounded-md bg-slate-100" aria-hidden />
           ) : showLogo ? (
             <img
-              src={trimmedLogo}
+              src={resolvedLogoSrc}
               alt="Company logo"
               className="h-16 max-w-full object-contain"
               onError={() => setImgBroken(true)}
             />
           ) : (
             <span className="truncate text-center text-lg font-bold leading-tight tracking-tight text-[#0F766E]">
-              {resolvedLabel}
+              <img
+                src={fallbackLogoSrc}
+                alt="Company logo"
+                className="h-16 max-w-full object-contain"
+                onError={() => setImgBroken(true)}
+              />
+              {imgBroken ? resolvedLabel : null}
             </span>
           )}
         </div>

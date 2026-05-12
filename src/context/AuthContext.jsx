@@ -20,7 +20,7 @@ const MOCK_USER = {
   email: "sarah.ahmed@hris.com",
   role: "hr_admin",
   panel: "admin",
-  tenantName: "Microlan IT",
+  tenantName: "TechnoWeb",
   tenantId: "tenant-1",
   tenant_features: [],
 };
