@@ -43,7 +43,7 @@ export function Sidebar({
       ? trimmedLogo
       : `${baseUrl}${trimmedLogo.startsWith('/') ? trimmedLogo : `/${trimmedLogo}`}`
     : ''
-  const fallbackLogoSrc = `${baseUrl}/public/HRIS_Logo.png`
+  const fallbackLogoSrc = `${baseUrl}/HRIS_Logo.png`
 
   const [imgBroken, setImgBroken] = useState(false)
   useEffect(() => {
