@@ -15,7 +15,6 @@ import {
   HiShieldCheck,
   HiUserCircle,
   HiUsers,
-  HiWrenchScrewdriver,
 } from "react-icons/hi2";
 import { Sidebar } from "../components/ui/Sidebar.jsx";
 import { Avatar } from "../components/ui/Avatar.jsx";
@@ -38,12 +37,14 @@ const superNavGroups = [
         path: '/superadmin/tenants',
         roles: ['superadmin', 'support_admin', 'billing_admin'],
       },
+      /* Global Modules Master — configure included modules when creating/editing Subscription Plans instead.
       {
         label: 'Global Modules',
         icon: HiWrenchScrewdriver,
         path: '/superadmin/modules',
         roles: ['superadmin'],
       },
+      */
       {
         label: 'Subscription Plans',
         icon: HiCurrencyDollar,

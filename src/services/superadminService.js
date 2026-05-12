@@ -282,7 +282,22 @@ function planWithFeatures(plan) {
       feature_code: f.feature_code,
       feature_description: f.feature_description || '',
     }))
-  return { ...plan, features: feats }
+  const modKeys = Array.isArray(plan.module_keys)
+    ? plan.module_keys.filter((k) => typeof k === 'string')
+    : []
+  const included_modules = modKeys
+    .map((key) => {
+      const m = modules.find((mod) => mod.module_key === key)
+      if (!m) return null
+      return {
+        module_key: m.module_key,
+        module_name: m.module_name,
+        description: m.description || '',
+        tier: m.tier,
+      }
+    })
+    .filter(Boolean)
+  return { ...plan, features: feats, module_keys: modKeys, included_modules }
 }
 
 let planRows = [
@@ -301,6 +316,7 @@ let planRows = [
     is_active: true,
     is_popular: false,
     feature_ids: [1],
+    module_keys: ['employee_directory', 'leave', 'onboarding_exit'],
   },
   {
     id: 2,
@@ -317,6 +333,15 @@ let planRows = [
     is_active: true,
     is_popular: true,
     feature_ids: [1, 3],
+    module_keys: [
+      'employee_directory',
+      'attendance',
+      'leave',
+      'performance',
+      'onboarding_exit',
+      'visa',
+      'expenses',
+    ],
   },
   {
     id: 3,
@@ -333,6 +358,7 @@ let planRows = [
     is_active: true,
     is_popular: false,
     feature_ids: [1, 2, 3],
+    module_keys: modules.filter((m) => m.scope === 'global').map((m) => m.module_key),
   },
 ]
 
@@ -649,6 +675,9 @@ export const superadminService = {
       is_active: payload.isActive !== false,
       is_popular: !!payload.is_popular,
       feature_ids: [],
+      module_keys: Array.isArray(payload.module_keys)
+        ? [...new Set(payload.module_keys.filter((k) => typeof k === 'string'))]
+        : [],
     }
     planRows = [...planRows, row]
     return ax(row)
@@ -689,6 +718,13 @@ export const superadminService = {
       ? featureIds.map((fid) => Number(fid)).filter((n) => !Number.isNaN(n))
       : []
     planRows = planRows.map((p) => (String(p.id) === String(id) ? { ...p, feature_ids: ids } : p))
+    return ax({ plan: planWithFeatures(planRows.find((p) => String(p.id) === String(id))) })
+  },
+  updatePlanModules: (id, moduleKeys) => {
+    const keys = Array.isArray(moduleKeys)
+      ? [...new Set(moduleKeys.filter((k) => typeof k === 'string'))]
+      : []
+    planRows = planRows.map((p) => (String(p.id) === String(id) ? { ...p, module_keys: keys } : p))
     return ax({ plan: planWithFeatures(planRows.find((p) => String(p.id) === String(id))) })
   },
 

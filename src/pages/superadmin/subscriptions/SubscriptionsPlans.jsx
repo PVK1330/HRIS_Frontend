@@ -40,7 +40,9 @@ export default function SubscriptionsPlans() {
   // Data states
   const [plans, setPlans] = useState([])
   const [allFeatures, setAllFeatures] = useState([])
+  const [globalModules, setGlobalModules] = useState([])
   const [selectedFeatures, setSelectedFeatures] = useState([])
+  const [selectedModuleKeys, setSelectedModuleKeys] = useState([])
 
   // Form initial state
   const initialForm = {
@@ -49,9 +51,9 @@ export default function SubscriptionsPlans() {
     plan_description: '',
     monthly_price: 0,
     annual_price: 0,
-    user_quota: 0,
-    storage_quota_gb: 0,
-    company_quota: 1,
+    // user_quota: 0,
+    // storage_quota_gb: 0,
+    // company_quota: 1,
     trial_days: 0,
     support_level: '',
     isActive: true
@@ -117,9 +119,21 @@ export default function SubscriptionsPlans() {
     }
   }
 
+  const fetchGlobalModules = async () => {
+    try {
+      const response = await superadminService.getModules()
+      const list = response?.data?.data?.modules || []
+      setGlobalModules(list.filter((m) => m.scope === 'global'))
+    } catch (err) {
+      console.error('Failed to fetch global modules:', err)
+      setGlobalModules([])
+    }
+  }
+
   useEffect(() => {
     fetchPlans()
     fetchFeatures()
+    fetchGlobalModules()
   }, [searchQuery])
 
   // Plan CRUD operations
@@ -149,15 +163,19 @@ export default function SubscriptionsPlans() {
         plan_description: planData.plan_description || '',
         monthly_price: Number(planData.monthly_price || 0),
         annual_price: Number(planData.annual_price || 0),
-        user_quota: Number(planData.user_quota || 0),
-        storage_quota_gb: Number(planData.storage_quota_gb || 0),
-        company_quota: Number(planData.company_quota || 1),
+        // user_quota: Number(planData.user_quota || 0),
+        // storage_quota_gb: Number(planData.storage_quota_gb || 0),
+        // company_quota: Number(planData.company_quota || 1),
         trial_days: Number(planData.trial_days || 0),
         support_level: planData.support_level || '',
         isActive: Boolean(planData.is_active)
       })
 
       setSelectedFeatures(planData.features ? planData.features.map(f => f.id) : [])
+      const keysFromPlan = Array.isArray(planData.module_keys)
+        ? planData.module_keys
+        : (planData.included_modules || []).map((m) => m.module_key)
+      setSelectedModuleKeys(keysFromPlan.filter((k) => typeof k === 'string'))
       setFormError(null)
       setShowEditPlanModal(true)
     } catch (err) {
@@ -172,10 +190,12 @@ export default function SubscriptionsPlans() {
       setFormError(null)
       await superadminService.updatePlan(selectedPlan.id, editForm)
       await superadminService.updatePlanFeatures(selectedPlan.id, selectedFeatures)
+      await superadminService.updatePlanModules(selectedPlan.id, selectedModuleKeys)
       await fetchPlans()
       setShowEditPlanModal(false)
       setSelectedPlan(null)
       setSelectedFeatures([])
+      setSelectedModuleKeys([])
     } catch (err) {
       setFormError(err.response?.data?.message || 'Failed to update plan')
     }
@@ -196,7 +216,10 @@ export default function SubscriptionsPlans() {
   const handleCreatePlan = async () => {
     try {
       setFormError(null)
-      const response = await superadminService.createPlan(newPlan)
+      const response = await superadminService.createPlan({
+        ...newPlan,
+        module_keys: selectedModuleKeys,
+      })
 
       if (response.data?.success && response.data.data?.id) {
         await superadminService.updatePlanFeatures(response.data.data.id, selectedFeatures)
@@ -206,6 +229,7 @@ export default function SubscriptionsPlans() {
       setShowAddPlanModal(false)
       setNewPlan(initialForm)
       setSelectedFeatures([])
+      setSelectedModuleKeys([])
     } catch (err) {
       setFormError(err.response?.data?.message || 'Failed to create plan')
     }
@@ -219,18 +243,42 @@ export default function SubscriptionsPlans() {
     )
   }
 
+  const toggleModuleKey = (moduleKey) => {
+    setSelectedModuleKeys((prev) =>
+      prev.includes(moduleKey)
+        ? prev.filter((k) => k !== moduleKey)
+        : [...prev, moduleKey]
+    )
+  }
+
+  const closeCreatePlanModal = () => {
+    setShowAddPlanModal(false)
+    setSelectedFeatures([])
+    setSelectedModuleKeys([])
+    setFormError(null)
+    setNewPlan(initialForm)
+  }
+
+  const closeEditPlanModal = () => {
+    setShowEditPlanModal(false)
+    setSelectedFeatures([])
+    setSelectedModuleKeys([])
+    setFormError(null)
+  }
+
   // Export functionality
   const handleExport = () => {
-    const headers = ['ID', 'Name', 'Code', 'Monthly Price', 'Annual Price', 'Users', 'Storage', 'Companies', 'Trial Days', 'Support Level', 'Status']
+    // const headers = ['ID', 'Name', 'Code', 'Monthly Price', 'Annual Price', 'Users', 'Storage', 'Companies', 'Trial Days', 'Support Level', 'Status']
+    const headers = ['ID', 'Name', 'Code', 'Monthly Price', 'Annual Price',  'Trial Days', 'Support Level', 'Status']
     const csvData = plans.map(p => [
       p.id,
       p.plan_name,
       p.plan_code,
       p.monthly_price,
       p.annual_price,
-      p.user_quota === -1 ? 'Unlimited' : p.user_quota,
-      p.storage_quota_gb === -1 ? 'Unlimited' : p.storage_quota_gb,
-      p.company_quota === -1 ? 'Unlimited' : p.company_quota,
+      // p.user_quota === -1 ? 'Unlimited' : p.user_quota,
+      // p.storage_quota_gb === -1 ? 'Unlimited' : p.storage_quota_gb,
+      // p.company_quota === -1 ? 'Unlimited' : p.company_quota,
       p.trial_days,
       p.support_level || 'Standard',
       p.is_active ? 'Active' : 'Inactive'
@@ -430,7 +478,7 @@ export default function SubscriptionsPlans() {
                   {plan.plan_description || "No description provided"}
                 </p>
 
-                <div className="space-y-3">
+                {/* <div className="space-y-3">
                   <div className="flex items-center justify-between py-2 border-b border-slate-50">
                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Users</span>
                     <span className="text-sm font-bold text-slate-900">{formatQuota(plan.user_quota)}</span>
@@ -443,7 +491,7 @@ export default function SubscriptionsPlans() {
                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Companies</span>
                     <span className="text-sm font-bold text-slate-900">{formatQuota(plan.company_quota)}</span>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Features List */}
                 {plan.features && plan.features.length > 0 && (
@@ -459,6 +507,25 @@ export default function SubscriptionsPlans() {
                       {plan.features.length > 6 && (
                         <li className="text-[10px] font-medium text-indigo-500 pl-5 pt-1">
                           + {plan.features.length - 6} more features
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+
+                {plan.included_modules && plan.included_modules.length > 0 && (
+                  <div className="pt-4 border-t border-slate-50 mt-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Included Modules</p>
+                    <ul className="space-y-2">
+                      {plan.included_modules.slice(0, 8).map((mod) => (
+                        <li key={mod.module_key} className="flex items-start gap-2 text-xs text-slate-600">
+                          <HiServerStack className="h-3.5 w-3.5 text-indigo-500 mt-0.5 flex-shrink-0" />
+                          <span className="line-clamp-1">{mod.module_name}</span>
+                        </li>
+                      ))}
+                      {plan.included_modules.length > 8 && (
+                        <li className="text-[10px] font-medium text-indigo-500 pl-5 pt-1">
+                          + {plan.included_modules.length - 8} more modules
                         </li>
                       )}
                     </ul>
@@ -496,14 +563,9 @@ export default function SubscriptionsPlans() {
       {/* Create Plan Modal */}
       <Modal
         isOpen={showAddPlanModal}
-        onClose={() => {
-          setShowAddPlanModal(false)
-          setSelectedFeatures([])
-          setFormError(null)
-          setNewPlan(initialForm)
-        }}
+        onClose={closeCreatePlanModal}
         title="Create New Pricing Plan"
-        description="Configure plan details, pricing, and included features"
+        description="Configure plan details, pricing, global modules, and included features"
         icon={HiPlus}
         size="lg"
       >
@@ -561,7 +623,7 @@ export default function SubscriptionsPlans() {
                 Recommended: ${Math.round(newPlan.monthly_price * 10.8 * 100) / 100} (10% discount)
               </p>
             </div>
-            <Input
+            {/* <Input
               label="User Quota (use -1 for unlimited)"
               type="number"
               value={newPlan.user_quota}
@@ -578,7 +640,7 @@ export default function SubscriptionsPlans() {
               type="number"
               value={newPlan.company_quota}
               onChange={(e) => setNewPlan({ ...newPlan, company_quota: parseInt(e.target.value) || 1 })}
-            />
+            /> */}
             <Input
               label="Trial Days (0 for no trial)"
               type="number"
@@ -631,12 +693,56 @@ export default function SubscriptionsPlans() {
             <p className="text-[10px] text-slate-500">Selected: {selectedFeatures.length} features</p>
           </div>
 
+          <div className="space-y-3">
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
+              Included Global Modules
+            </label>
+            <p className="text-[10px] text-slate-500 -mt-1">
+              Same catalog as Global Modules Master; pick which HR modules subscribers on this plan can use.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50/30">
+              {globalModules.length === 0 ? (
+                <p className="text-sm text-slate-400 col-span-2 text-center py-4">Loading modules...</p>
+              ) : (
+                globalModules.map((mod) => (
+                  <div
+                    key={mod.module_key}
+                    className={`flex items-center gap-3 p-2 rounded-lg border transition-all cursor-pointer ${
+                      selectedModuleKeys.includes(mod.module_key)
+                        ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-200'
+                    }`}
+                    onClick={() => toggleModuleKey(mod.module_key)}
+                  >
+                    <div
+                      className={`h-5 w-5 rounded-md flex items-center justify-center transition-colors flex-shrink-0 ${
+                        selectedModuleKeys.includes(mod.module_key)
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white border-2 border-slate-300'
+                      }`}
+                    >
+                      {selectedModuleKeys.includes(mod.module_key) && <HiCheck className="h-3 w-3" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{mod.module_name}</p>
+                      <p className="text-[10px] text-slate-500 truncate">
+                        {mod.module_key}
+                        {mod.tier ? ` · ${mod.tier}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <p className="text-[10px] text-slate-500">Selected: {selectedModuleKeys.length} modules</p>
+          </div>
+
           <div className="flex gap-3 pt-4 border-t border-slate-200">
             <Button
               label="Cancel"
               variant="ghost"
               className="flex-1"
-              onClick={() => setShowAddPlanModal(false)}
+              onClick={closeCreatePlanModal}
             />
             <Button
               label="Create Plan"
@@ -652,13 +758,9 @@ export default function SubscriptionsPlans() {
       {/* Edit Plan Modal */}
       <Modal
         isOpen={showEditPlanModal}
-        onClose={() => {
-          setShowEditPlanModal(false)
-          setSelectedFeatures([])
-          setFormError(null)
-        }}
+        onClose={closeEditPlanModal}
         title={`Edit Plan: ${selectedPlan?.plan_name}`}
-        description="Modify plan details, pricing, and feature access"
+        description="Modify plan details, pricing, global modules, and feature access"
         icon={HiPencil}
         size="lg"
       >
@@ -706,7 +808,7 @@ export default function SubscriptionsPlans() {
                 Recommended: ${Math.round(editForm.monthly_price * 10.8 * 100) / 100} (10% discount)
               </p>
             </div>
-            <Input
+            {/* <Input
               label="User Quota (use -1 for unlimited)"
               type="number"
               value={editForm.user_quota}
@@ -723,7 +825,7 @@ export default function SubscriptionsPlans() {
               type="number"
               value={editForm.company_quota}
               onChange={(e) => setEditForm({ ...editForm, company_quota: parseInt(e.target.value) || 1 })}
-            />
+            /> */}
             <Input
               label="Trial Days"
               type="number"
@@ -770,6 +872,47 @@ export default function SubscriptionsPlans() {
             <p className="text-[10px] text-slate-500">Selected: {selectedFeatures.length} features</p>
           </div>
 
+          <div className="space-y-3">
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
+              Included Global Modules
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50/30">
+              {globalModules.length === 0 ? (
+                <p className="text-sm text-slate-400 col-span-2 text-center py-4">Loading modules...</p>
+              ) : (
+                globalModules.map((mod) => (
+                  <div
+                    key={mod.module_key}
+                    className={`flex items-center gap-3 p-2 rounded-lg border transition-all cursor-pointer ${
+                      selectedModuleKeys.includes(mod.module_key)
+                        ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-200'
+                    }`}
+                    onClick={() => toggleModuleKey(mod.module_key)}
+                  >
+                    <div
+                      className={`h-5 w-5 rounded-md flex items-center justify-center transition-colors flex-shrink-0 ${
+                        selectedModuleKeys.includes(mod.module_key)
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white border-2 border-slate-300'
+                      }`}
+                    >
+                      {selectedModuleKeys.includes(mod.module_key) && <HiCheck className="h-3 w-3" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{mod.module_name}</p>
+                      <p className="text-[10px] text-slate-500 truncate">
+                        {mod.module_key}
+                        {mod.tier ? ` · ${mod.tier}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <p className="text-[10px] text-slate-500">Selected: {selectedModuleKeys.length} modules</p>
+          </div>
+
           <div className="flex items-center justify-between pt-4 border-t border-slate-200">
             <Button
               label="Delete Plan"
@@ -785,7 +928,7 @@ export default function SubscriptionsPlans() {
               <Button
                 label="Cancel"
                 variant="ghost"
-                onClick={() => setShowEditPlanModal(false)}
+                onClick={closeEditPlanModal}
               />
               <Button
                 label="Save Changes"
@@ -857,7 +1000,7 @@ export default function SubscriptionsPlans() {
                   </div>
                 </div>
               </div>
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              {/* <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quotas</p>
                 <div className="flex flex-col gap-1">
                   <div className="flex justify-between">
@@ -873,7 +1016,7 @@ export default function SubscriptionsPlans() {
                     <span className="text-sm font-bold text-slate-900">{formatQuota(selectedPlan.company_quota)}</span>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             <div>
@@ -890,6 +1033,32 @@ export default function SubscriptionsPlans() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Included Global Modules</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(selectedPlan.included_modules || []).length === 0 ? (
+                  <p className="text-sm text-slate-500 col-span-2">No modules selected for this plan.</p>
+                ) : (
+                  selectedPlan.included_modules.map((mod) => (
+                    <div
+                      key={mod.module_key}
+                      className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl shadow-sm"
+                    >
+                      <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                        <HiServerStack className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{mod.module_name}</p>
+                        <p className="text-[10px] text-slate-500">
+                          {[mod.description, mod.tier].filter(Boolean).join(' · ') || mod.module_key}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
             

@@ -286,7 +286,7 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-red-100 bg-red-50/50 p-4 shadow-sm">
+          {/* <div className="rounded-2xl border border-red-100 bg-red-50/50 p-4 shadow-sm">
             <h2 className="text-[9px] font-bold text-red-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
               <HiExclamationTriangle className="animate-pulse" /> Important Alerts
             </h2>
@@ -303,7 +303,7 @@ export default function SuperAdminDashboard() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
           <div className="sa-card p-4">
             <h2 className="text-xs font-bold text-slate-900 mb-4">Platform Activity</h2>
